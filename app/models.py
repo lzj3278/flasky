@@ -1,14 +1,19 @@
-# coding=utf-8
+# -*- coding=utf-8 -*-
 from . import db
-from flask import current_app
+from flask import current_app, request
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import UserMixin, AnonymousUserMixin
 from . import login_manager
 from itsdangerous import TimedJSONWebSignatureSerializer as seris
 from datetime import datetime
+import hashlib
 
 
 class Permission:
+    """
+    权限对应
+    """
+
     def __init__(self):
         pass
 
@@ -29,6 +34,10 @@ class Role(db.Model):
 
     @staticmethod
     def insert_roles():
+        """
+        数据库角色添加
+        :return: 
+        """
         roles = {
             'User': (Permission.FOLLOW | Permission.COMMIT | Permission.WRITE_ARTICLES, True),
             'Moderator': (
@@ -49,6 +58,9 @@ class Role(db.Model):
 
 
 class User(UserMixin, db.Model):
+    """
+    用户类
+    """
     __tablename__ = 'users'
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(64), unique=True, index=True)
@@ -61,6 +73,7 @@ class User(UserMixin, db.Model):
     about_me = db.Column(db.Text())
     member_since = db.Column(db.DateTime(), default=datetime.utcnow)
     last_seen = db.Column(db.DateTime(), default=datetime.utcnow)
+    avatar_hash = db.Column(db.String(32))
 
     def __init__(self, **kwargs):
         super(User, self).__init__(**kwargs)
@@ -69,6 +82,8 @@ class User(UserMixin, db.Model):
                 self.role = Role.query.filter_by(permission=0xff).first()
             if self.role is None:
                 self.role = Role.query.filter_by(default=True).first()
+        if self.email is not None and self.avatar_hash is None:
+            self.avatar_hash = hashlib.md5(self.email.encode('utf-8')).hexdigest()
 
     @property
     def password(self):
@@ -132,17 +147,46 @@ class User(UserMixin, db.Model):
         return True
 
     def can(self, permissions):
+        """
+        验证权限通不通过
+        :param permissions: 待验证权限
+        :return: 
+        """
         return self.role is not None and (self.role.permission & permissions) == permissions
 
     def is_administrator(self):
+        """
+        验证是不是管理员
+        :return: 
+        """
         return self.can(Permission.ADMINISTER)
 
     def __repr__(self):
         return '<User %r>' % self.username
 
     def ping(self):
+        """
+        最后登录时间记录
+        :return: 
+        """
         self.last_seen = datetime.utcnow()
         db.session.add(self)
+
+    def gravatar(self, size=100, default='identicon', rating='g'):
+        """
+        生成图片url
+        :param size: 
+        :param default: 
+        :param rating: 
+        :return: 
+        """
+        if request.is_secure:
+            url = 'https://secure.gravatar.com/avatar'
+        else:
+            url = 'http://www.gravatar.com/avatar'
+        hash = self.avatar_hash or hashlib.md5(self.email.encode('utf-8')).hexdigest()
+        return '{url}/{hash}?s={size}&d={default}&r={rating}'.format(url=url, hash=hash, size=size, default=default,
+                                                                     rating=rating)
 
 
 class AnonymousUser(AnonymousUserMixin):
@@ -152,7 +196,9 @@ class AnonymousUser(AnonymousUserMixin):
     def is_administrator(self):
         return False
 
+
 login_manager.anonymous_user = AnonymousUser
+
 
 @login_manager.user_loader
 def load_user(user_id):
