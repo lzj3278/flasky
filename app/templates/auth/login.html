@@ -6,8 +6,9 @@
     <h1>登录</h1>
     </div>
     <div class="col-md-4">
-    {{ wtf.quick_form(form) }}
-    <br>
+            {{ wtf.quick_form(form) }}
+
+        <br>
         <p>
         新用户？
             <a href="{{ url_for('auth.register') }}"> 点击注册</a>
@@ -16,5 +17,5 @@
         忘记密码？
         <a href="{{ url_for('auth.reset_password') }}"> 找回密码</a>
     </p>
-
+</div>
 {% endblock %}

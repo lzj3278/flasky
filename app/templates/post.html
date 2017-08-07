@@ -1,0 +1,59 @@
+{% extends 'base.html' %}
+{% import 'bootstrap/wtf.html' as wtf  %}
+{% import "_macros.html" as macros %}
+{% block title %}
+Flasky-post
+{% endblock %}
+{% block page_content %}
+    {% for post in posts %}
+<div class="page-header">
+    <img class="img-rounded profile-thumbnail" src="{{ post.author.gravatar(size=256) }}">
+    <div class="profile-header">
+        <h1>{{ post.author.username }}</h1>
+        {% if post.author.name or post.author.location %}
+            <p>
+            {% if post.author.name %}
+            {{ post.author.name }}
+            {% endif %}
+            {% if post.author.location %}
+            From <a href="http://maps.google.com/?q={{ post.author.location }}">{{ post.author.location }}</a>
+            {% endif %}
+            </p>
+        {% endif %}
+        {% if post.author.about_me %} <p>{{ post.author.about_me }}</p>{% endif %}
+        <p>Member since {{ moment(post.author.member_since).format('LLL') }}. Last seen {{ moment(post.author.last_seen).fromNow() }}.</p>
+        <p>
+        {% if current_user != post.author %}
+        <a href="{{ url_for('.followers',username=post.author.username) }}">
+            粉丝:<span class="badge">{{ post.author.followers.count() - 1 }}</span></a>
+        <a href="{{ url_for('.follow_to_other',username=post.author.username) }}">
+            关注:<span class="badge">{{ post.author.followed.count()  - 1 }}</span></a>
+        {% else %}
+            <a href="{{ url_for('.followers',username=post.author.username) }}">
+            粉丝:<span class="badge">{{ post.author.followers.count() }}</span></a>
+            <a href="{{ url_for('.follow_to_other',username=post.author.username) }}">
+            关注:<span class="badge">{{ post.author.followed.count()  }}</span></a>
+        {% endif %}
+        {% if current_user.is_authenticated and current_user != post.author and post.author.is_following(current_user) %}
+            |<span class="label label-success">你的粉丝</span>
+
+        {% endif %}
+        </p>
+    </div>
+</div>
+{% endfor %}
+{% include '_posts.html' %}
+    <h4 id="comments">Comments</h4>
+{% if current_user.can(Permission.COMMENT) %}
+<div class="comment-form">
+    {{ wtf.quick_form(form) }}
+</div>
+{% endif %}
+{% include '_comment.html' %}
+{% if pagination %}
+<div class="pagination">
+    {{ macros.pagination_widget(pagination, '.post', fragment='#comments', id=posts[0].id) }}
+</div>
+{% endif %}
+{% endblock %}
+
