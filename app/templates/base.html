@@ -30,6 +30,11 @@
                         Profile
                     </a>
                 </li>
+{#                {% if current_user.can(Permission.MODERATE_COMMENT) %}#}
+{#                    <li>#}
+{#                    <a href="{{ url_for('main.moderate') }}">审查评论</a>#}
+{#                    </li>#}
+{#                {% endif %}#}
 {#                    <li>#}
 {#                    <a href="{{ url_for('main.edit_profile',username = current_user.username) }}"> 修改</a>#}
 {#                    </li>#}
